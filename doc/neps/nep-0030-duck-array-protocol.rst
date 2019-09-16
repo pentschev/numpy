@@ -24,7 +24,7 @@ Detailed description
 NumPy's API, including array definitions, is implemented and mimicked in
 countless other projects. By definition, many of those arrays are fairly
 similar in how they operate to the NumPy standard. The introduction of
-``__array_function__`` allowed dispathing of functions implemented by several
+``__array_function__`` allowed dispatching of functions implemented by several
 of these projects directly via NumPy's API. This introduces a new requirement,
 returning the NumPy-like array itself, rather than forcing a coercion into a
 pure NumPy array.
@@ -33,7 +33,13 @@ For the purpose above, NEP 22 introduced the concept of duck typing to NumPy
 arrays. The suggested solution described in the NEP allows libraries to avoid
 coercion of a NumPy-like array to a pure NumPy array where necessary, while
 still allowing that NumPy-like array libraries that do not wish to implement
-the protocol to coerce arrays to a pure Numpy array via ``np.asarray``.
+the protocol to coerce arrays to a pure NumPy array via ``np.asarray``.
+
+Note that one of the key distictions between a "duck array" and what ``asarray()``
+is usually expected to return is that much code that uses ``asarray()`` expects an
+object that not only has the same Python API as a NumPy array, but also has the same
+C API, as can often be used in C or Cython extension code. Usually this requires an
+actual NumPy array, or a strict subclass.
 
 Implementation
 --------------
@@ -42,7 +48,8 @@ The implementation idea is fairly straightforward, requiring a new function
 ``duckarray`` to be introduced in NumPy, and a new method ``__duckarray__`` in
 NumPy-like array classes. The new ``__duckarray__`` method shall return the
 downstream array-like object itself, such as the ``self`` object, while the
-``__array__`` method returns ``TypeError``.
+``__array__`` method either returns ``TypeError`` or creates an actual numpy
+array, and returns that.
 
 The new NumPy ``duckarray`` function can be implemented as follows:
 
@@ -67,7 +74,8 @@ a complete implementation would look like the following:
             return self
 
         def __array__(self):
-            return TypeError
+            return TypeError("NumPyLikeArray can not be converted to a numpy array."
+                             "You may want to use ``np.duckarry()`` instead")
 
 The implementation above exemplifies the simplest case, but the overall idea
 is that libraries will implement a ``__duckarray__`` method that returns the
