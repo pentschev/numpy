@@ -116,6 +116,8 @@ _wrapped_func_source = textwrap.dedent("""
     @functools.wraps(implementation)
     def {name}(*args, **kwargs):
         relevant_args = dispatcher(*args, **kwargs)
+        if "like" in kwargs:
+            kwargs.pop("like")
         return implement_array_function(
             implementation, {name}, relevant_args, args, kwargs)
     """)

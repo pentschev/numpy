@@ -5,16 +5,28 @@ Functions in the ``as*array`` family that promote array-likes into arrays.
 """
 from __future__ import division, absolute_import, print_function
 
-from .overrides import set_module
+from .overrides import array_function_dispatch, set_module
 from .multiarray import array
 
 
 __all__ = [
-    "asarray", "asanyarray", "ascontiguousarray", "asfortranarray", "require",
+    "asarray", "asanyarray", "ascontiguousarray", "asfortranarray", "duckarray", "require",
 ]
 
+
+def _asarray_dispatcher(a, dtype=None, order=None, like=None):
+    return (like,)
+
+
+#def _asarray_dispatcher(*args, **kwargs):
+#    if "like" in kwargs and kwargs["like"] is not None:
+#        return (kwargs["like"],)
+#    return ()
+
+
+@array_function_dispatch(_asarray_dispatcher)
 @set_module('numpy')
-def asarray(a, dtype=None, order=None):
+def asarray(a, dtype=None, order=None, like=None):
     """Convert the input to an array.
 
     Parameters
@@ -221,6 +233,15 @@ def asfortranarray(a, dtype=None):
 
 
 @set_module('numpy')
+def duckarray(a, like=None):
+    if hasattr(a, '__duckarray__'):
+        return a.__duckarray__()
+    #if like is not None:
+    #    return asarray(like)
+    return asarray(a)
+
+
+#@set_module('numpy')
 def require(a, dtype=None, requirements=None):
     """
     Return an ndarray of the provided type that satisfies requirements.

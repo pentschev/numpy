@@ -1284,7 +1284,7 @@ add_newdoc('numpy.core.multiarray', 'correlate',
 
 add_newdoc('numpy.core.multiarray', 'arange',
     """
-    arange([start,] stop[, step,], dtype=None)
+    arange([start,] stop[, step,], dtype=None, like=None)
 
     Return evenly spaced values within a given interval.
 

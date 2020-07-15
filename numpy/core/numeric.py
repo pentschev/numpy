@@ -156,8 +156,14 @@ def zeros_like(a, dtype=None, order='K', subok=True, shape=None):
     return res
 
 
-@set_module('numpy')
-def ones(shape, dtype=None, order='C'):
+def _ones_dispatcher(shape, dtype=None, order=None, like=None):
+    if like is not None:
+        return (like,)
+    return ()
+
+
+@array_function_dispatch(_ones_dispatcher)
+def ones(shape, dtype=None, order='C', like=None):
     """
     Return a new array of given shape and type, filled with ones.
 

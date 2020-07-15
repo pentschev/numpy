@@ -19,13 +19,16 @@ array_function_dispatch = functools.partial(
 
 
 def _linspace_dispatcher(start, stop, num=None, endpoint=None, retstep=None,
-                         dtype=None, axis=None):
+                         dtype=None, axis=None, like=None):
+    if like is not None:
+        return(like, start, stop)
+        #return(start, stop, like)
     return (start, stop)
 
 
 @array_function_dispatch(_linspace_dispatcher)
 def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None,
-             axis=0):
+             axis=0, like=None):
     """
     Return evenly spaced numbers over a specified interval.
 

@@ -49,8 +49,8 @@ _reconstruct.__module__ = 'numpy.core.multiarray'
 scalar.__module__ = 'numpy.core.multiarray'
 
 
-arange.__module__ = 'numpy'
-array.__module__ = 'numpy'
+#arange.__module__ = 'numpy'
+#array.__module__ = 'numpy'
 datetime_data.__module__ = 'numpy'
 empty.__module__ = 'numpy'
 frombuffer.__module__ = 'numpy'
@@ -72,6 +72,50 @@ zeros.__module__ = 'numpy'
 array_function_from_c_func_and_dispatcher = functools.partial(
     overrides.array_function_from_dispatcher,
     module='numpy', docs_from_dispatcher=True, verify=False)
+
+
+array_function_nodocs_from_c_func_and_dispatcher = functools.partial(
+    overrides.array_function_from_dispatcher,
+    module='numpy', docs_from_dispatcher=False, verify=False)
+
+@array_function_nodocs_from_c_func_and_dispatcher(_multiarray_umath.array)
+def array(a, dtype=None, copy=True, order='K', subok=False, ndmin=0, like=None):
+    return (like,)
+
+#@array_function_from_c_func_and_dispatcher(_multiarray_umath.array, docs_from_dispatcher=False)
+#def array(a, dtype=None, copy=True, order='K', subok=False, ndmin=0, like=None):
+#    return (a,) if like is None else (like,)
+
+
+
+
+
+
+
+
+
+
+#@array_function_from_c_func_and_dispatcher(_multiarray_umath.array)
+#def array(a, dtype=None, copy=True, order='K', subok=False, ndmin=0, like=None):
+#    """
+#    array
+#    """
+#    return (a,) if like is None else (like,)
+
+#print(array, array.__module__)
+
+
+#@array_function_nodocs_from_c_func_and_dispatcher(_multiarray_umath.arange)
+#def arange(start, stop=None, step=1, dtype=None, like=None):
+#    return () if like is None else (like,)
+
+
+#@array_function_nodocs_from_c_func_and_dispatcher(_multiarray_umath.arange)
+#def arange(*args, **kwargs):
+#    print(kwargs)
+#    if "like" in kwargs and kwargs["like"] is not None:
+#        return (kwargs["like"],)
+#    return ()
 
 
 @array_function_from_c_func_and_dispatcher(_multiarray_umath.empty_like)
