@@ -115,7 +115,12 @@ def set_module(module):
 _wrapped_func_source = textwrap.dedent("""
     @functools.wraps(implementation)
     def {name}(*args, **kwargs):
+        if "like" in kwargs:
+            kwargs.pop("like")
         relevant_args = dispatcher(*args, **kwargs)
+        #print(implementation, {name}, relevant_args, args, kwargs)
+        #print(implementation, args, kwargs)
+        print(implementation, kwargs)
         return implement_array_function(
             implementation, {name}, relevant_args, args, kwargs)
     """)
@@ -186,6 +191,7 @@ def array_function_dispatch(dispatcher, module=None, verify=True,
             'implement_array_function': implement_array_function,
         }
         exec(source_object, scope)
+        #print("implementation, dispatcher:", implementation, dispatcher)
 
         public_api = scope[implementation.__name__]
 
@@ -193,6 +199,7 @@ def array_function_dispatch(dispatcher, module=None, verify=True,
             public_api.__module__ = module
 
         public_api._implementation = implementation
+        print(public_api)
 
         return public_api
 
