@@ -109,12 +109,24 @@ def set_module(module):
     return decorator
 
 
-
 # Call textwrap.dedent here instead of in the function so as to avoid
 # calling dedent multiple times on the same text
 _wrapped_func_source = textwrap.dedent("""
     @functools.wraps(implementation)
     def {name}(*args, **kwargs):
+        if 'like' in kwargs and kwargs['like'] is None:
+            return implementation(*args, **kwargs)
+        relevant_args = dispatcher(*args, **kwargs)
+        return implement_array_function(
+            implementation, {name}, relevant_args, args, kwargs)
+    """)
+
+
+_wrapped_create_func_source = textwrap.dedent("""
+    @functools.wraps(implementation)
+    def {name}(*args, **kwargs):
+        if 'like' not in kwargs:
+            return dispatcher(*args, **kwargs)
         relevant_args = dispatcher(*args, **kwargs)
         return implement_array_function(
             implementation, {name}, relevant_args, args, kwargs)
@@ -122,7 +134,7 @@ _wrapped_func_source = textwrap.dedent("""
 
 
 def array_function_dispatch(dispatcher, module=None, verify=True,
-                            docs_from_dispatcher=False):
+                            docs_from_dispatcher=False, create=False):
     """Decorator for adding dispatch with the __array_function__ protocol.
 
     See NEP-18 for example usage.
@@ -175,7 +187,12 @@ def array_function_dispatch(dispatcher, module=None, verify=True,
         # more interpettable name. Otherwise, the original function does not
         # show up at all in many cases, e.g., if it's written in C or if the
         # dispatcher gets an invalid keyword argument.
-        source = _wrapped_func_source.format(name=implementation.__name__)
+        if create is True:
+            source = _wrapped_create_func_source.format(
+                name=implementation.__name__
+            )
+        else:
+            source = _wrapped_func_source.format(name=implementation.__name__)
 
         source_object = compile(
             source, filename='<__array_function__ internals>', mode='exec')
@@ -200,11 +217,13 @@ def array_function_dispatch(dispatcher, module=None, verify=True,
 
 
 def array_function_from_dispatcher(
-        implementation, module=None, verify=True, docs_from_dispatcher=True):
+        implementation, module=None, verify=True, docs_from_dispatcher=True,
+        create=False):
     """Like array_function_dispatcher, but with function arguments flipped."""
 
     def decorator(dispatcher):
         return array_function_dispatch(
             dispatcher, module, verify=verify,
-            docs_from_dispatcher=docs_from_dispatcher)(implementation)
+            docs_from_dispatcher=docs_from_dispatcher,
+            create=create)(implementation)
     return decorator
