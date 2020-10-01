@@ -191,11 +191,27 @@ call_array_function(PyObject* argument, PyObject* method,
                     PyObject* args, PyObject* kwargs)
 {
     if (is_default_array_function(method)) {
+        //printf("call_array_function if\n");
         return array_function_method_impl(public_api, types, args, kwargs);
     }
     else {
-        return PyObject_CallFunctionObjArgs(
+        //printf("call_array_function else\n");
+        PyObject *errmsg = PyObject_CallFunctionObjArgs(
             method, argument, public_api, types, args, kwargs, NULL);
+        //printf("call_array_function else1: %p\n", errmsg);
+        if (PyErr_Occurred()) {
+            PyErr_Clear();
+            //printf("call_array_function else2: %p\n", errmsg);
+            if (kwargs != NULL && PyDict_Contains(kwargs, npy_ma_str_like)) {
+                PyDict_DelItem(kwargs, npy_ma_str_like);
+            }
+            return PyObject_CallFunctionObjArgs(
+                method, argument, public_api, types, args, kwargs, NULL);
+            //PyErr_SetObject(PyExc_TypeError, errmsg);
+            //Py_DECREF(errmsg);
+        }
+        //printf("call_array_function else3: %p\n", errmsg);
+        return errmsg;
     }
 }
 
@@ -308,6 +324,7 @@ array_implement_array_function_internal(
     if (errmsg_formatter != NULL) {
         PyObject *errmsg = PyObject_CallFunctionObjArgs(
             errmsg_formatter, public_api, types, NULL);
+        //printf("errmsg: \n");
         if (errmsg != NULL) {
             PyErr_SetObject(PyExc_TypeError, errmsg);
             Py_DECREF(errmsg);
@@ -344,14 +361,23 @@ array_implement_array_function(
     /* Remove `like=` kwarg, which is NumPy-exclusive and thus not present
      * in downstream libraries.
      */
+    static PyObject *_numpy_ndarray;
+    npy_cache_import(
+        "numpy",
+        "ndarray",
+        &_numpy_ndarray);
     if (kwargs != NULL && PyDict_Contains(kwargs, npy_ma_str_like)) {
-        PyDict_DelItem(kwargs, npy_ma_str_like);
+        PyObject *like_object = PyDict_GetItem(kwargs, npy_ma_str_like);
+        if (PyObject_IsInstance(like_object, _numpy_ndarray) || !PyObject_HasAttrString(like_object, "__array_function__")) {
+            PyDict_DelItem(kwargs, npy_ma_str_like);
+        }
     }
 
     PyObject *res = array_implement_array_function_internal(
         public_api, relevant_args, args, kwargs);
 
     if (res == Py_NotImplemented) {
+        //printf("array_implement_array_function: \n");
         return PyObject_Call(implementation, args, kwargs);
     }
     return res;
@@ -384,7 +410,17 @@ array_implement_c_array_function_creation(
     if (relevant_args == NULL) {
         return NULL;
     }
-    PyDict_DelItem(kwargs, npy_ma_str_like);
+    //PyDict_DelItem(kwargs, npy_ma_str_like);
+    static PyObject *_numpy_ndarray;
+    npy_cache_import(
+        "numpy",
+        "ndarray",
+        &_numpy_ndarray);
+    PyObject *like_object = PyDict_GetItem(kwargs, npy_ma_str_like);
+    //if (PyObject_IsInstance(like_object, _numpy_ndarray)) {
+    if (PyObject_IsInstance(like_object, _numpy_ndarray) || !PyObject_HasAttrString(like_object, "__array_function__")) {
+        PyDict_DelItem(kwargs, npy_ma_str_like);
+    }
 
     PyObject *numpy_module = PyImport_Import(npy_ma_str_numpy);
     if (numpy_module == NULL) {
@@ -402,6 +438,14 @@ array_implement_c_array_function_creation(
                             "numpy.%s is not callable.",
                             function_name);
     }
+
+    //int has_like = PyObject_HasAttr(public_api, npy_ma_str_like);
+    //int has_copy = PyObject_HasAttr(public_api, npy_ma_str_copy);
+    //int has_order = PyObject_HasAttr(public_api, npy_ma_str_order);
+    int has_like = PyObject_HasAttrString(public_api, "like");
+    int has_copy = PyObject_HasAttrString(public_api, "copy");
+    int has_order = PyObject_HasAttrString(public_api, "order");
+    //printf("has_like, has_copy, has_order: %d, %d, %d\n", has_like, has_copy, has_order);
 
     PyObject* result = array_implement_array_function_internal(
             public_api, relevant_args, args, kwargs);
