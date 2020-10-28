@@ -240,6 +240,7 @@ PRIVATE_BUT_PRESENT_MODULES = ['numpy.' + s for s in [
     "distutils.fcompiler.none",
     "distutils.fcompiler.pathf95",
     "distutils.fcompiler.pg",
+    "distutils.fcompiler.nv",
     "distutils.fcompiler.sun",
     "distutils.fcompiler.vast",
     "distutils.from_template",
@@ -348,7 +349,7 @@ def test_all_modules_are_expected():
             modnames.append(modname)
 
     if modnames:
-        raise AssertionError("Found unexpected modules: {}".format(modnames))
+        raise AssertionError(f'Found unexpected modules: {modnames}')
 
 
 # Stuff that clearly shouldn't be in the API and is detected by the next test

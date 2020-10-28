@@ -128,7 +128,9 @@ _prime_global_pytype_to_type_dict(void)
 
 
 /**
- * Add a new mapping from a python type to the DType class.
+ * Add a new mapping from a python type to the DType class. For a user
+ * defined legacy dtype, this function does nothing unless the pytype
+ * subclass from `np.generic`.
  *
  * This assumes that the DType class is guaranteed to hold on the
  * python type (this assumption is guaranteed).
@@ -145,21 +147,29 @@ _PyArray_MapPyTypeToDType(
 {
     PyObject *Dtype_obj = (PyObject *)DType;
 
-    if (userdef) {
+    if (userdef && !PyObject_IsSubclass(
+                    (PyObject *)pytype, (PyObject *)&PyGenericArrType_Type)) {
         /*
-         * It seems we did not strictly enforce this in the legacy dtype
-         * API, but assume that it is always true. Further, this could be
-         * relaxed in the future. In particular we should have a new
-         * superclass of ``np.generic`` in order to note enforce the array
-         * scalar behaviour.
+         * We expect that user dtypes (for now) will subclass some numpy
+         * scalar class to allow automatic discovery.
          */
-        if (!PyObject_IsSubclass((PyObject *)pytype, (PyObject *)&PyGenericArrType_Type)) {
-            PyErr_Format(PyExc_RuntimeError,
-                    "currently it is only possible to register a DType "
-                    "for scalars deriving from `np.generic`, got '%S'.",
-                    (PyObject *)pytype);
-            return -1;
+        if (DType->legacy) {
+            /*
+             * For legacy user dtypes, discovery relied on subclassing, but
+             * arbitrary type objects are supported, so do nothing.
+             */
+            return 0;
         }
+        /*
+         * We currently enforce that user DTypes subclass from `np.generic`
+         * (this should become a `np.generic` base class and may be lifted
+         * entirely).
+         */
+        PyErr_Format(PyExc_RuntimeError,
+                "currently it is only possible to register a DType "
+                "for scalars deriving from `np.generic`, got '%S'.",
+                (PyObject *)pytype);
+        return -1;
     }
 
     /* Create the global dictionary if it does not exist */
@@ -288,7 +298,7 @@ discover_dtype_from_pyobject(
         Py_INCREF(DType);
         Py_DECREF(legacy_descr);
         /* TODO: Enable warning about subclass handling */
-        if (0 && !((*flags) & GAVE_SUBCLASS_WARNING)) {
+        if ((0) && !((*flags) & GAVE_SUBCLASS_WARNING)) {
             if (DEPRECATE_FUTUREWARNING(
                     "in the future NumPy will not automatically find the "
                     "dtype for subclasses of scalars known to NumPy (i.e. "
@@ -538,7 +548,7 @@ npy_new_coercion_cache(
         cache = _coercion_cache_cache[_coercion_cache_num];
     }
     else {
-        cache = PyObject_MALLOC(sizeof(coercion_cache_obj));
+        cache = PyMem_Malloc(sizeof(coercion_cache_obj));
     }
     if (cache == NULL) {
         PyErr_NoMemory();
@@ -570,7 +580,7 @@ npy_unlink_coercion_cache(coercion_cache_obj *current)
         _coercion_cache_num++;
     }
     else {
-        PyObject_FREE(current);
+        PyMem_Free(current);
     }
     return next;
 }
